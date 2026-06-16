@@ -37,13 +37,15 @@ const eur = (n) => "\u20AC" + n.toLocaleString("en-US", { minimumFractionDigits:
 const CATS = ["Food & Drink", "Transport", "Lodging", "Shopping", "Groceries", "Other"];
 const CAT_ICON = { "Food & Drink": Coffee, Transport: Car, Lodging: Bed, Shopping: ShoppingBag, Groceries: ShoppingBag, Other: Sparkles };
 
+const TODAY = "2026-06-16";
+const DAILY_BUDGET = 250;
 const SEED_EXPENSES = [
   { id: 1, merchant: "Selina Lisbon \u00b7 7 nights", category: "Lodging", currency: "EUR", amountLocal: 620.0, date: "2026-06-02" },
   { id: 2, merchant: "TAP Air, intra-EU", category: "Transport", currency: "EUR", amountLocal: 148.0, date: "2026-06-02" },
   { id: 3, merchant: "Pingo Doce groceries", category: "Groceries", currency: "EUR", amountLocal: 58.75, date: "2026-06-07" },
   { id: 4, merchant: "Bolt rides (week)", category: "Transport", currency: "EUR", amountLocal: 41.3, date: "2026-06-09" },
-  { id: 5, merchant: "Coworking day pass", category: "Other", currency: "EUR", amountLocal: 22.0, date: "2026-06-11" },
-  { id: 6, merchant: "Time Out Market", category: "Food & Drink", currency: "EUR", amountLocal: 34.5, date: "2026-06-12" },
+  { id: 5, merchant: "Coworking day pass", category: "Other", currency: "EUR", amountLocal: 22.0, date: "2026-06-11", addedAt: TODAY },
+  { id: 6, merchant: "Time Out Market", category: "Food & Drink", currency: "EUR", amountLocal: 34.5, date: "2026-06-12", addedAt: TODAY },
 ];
 const TRIP_BUDGET = 2500;
 
@@ -134,7 +136,7 @@ function UtilityBar({ onMenu, onBell, unread }) {
 // =======================================================================
 //  HOME
 // =======================================================================
-function HomeScreen({ spent, go, now, onMenu, onBell, unread }) {
+function HomeScreen({ spent, spentToday, go, now, onMenu, onBell, unread }) {
   return (
     <div>
       <div style={{ background: C.ink, paddingBottom: 18, position: "relative", overflow: "hidden" }}>
@@ -193,7 +195,7 @@ function HomeScreen({ spent, go, now, onMenu, onBell, unread }) {
           <div className="flex" style={{ marginTop: 12 }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 11, color: C.sub, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 700 }}>Daily</div>
-              <div style={{ fontFamily: SERIF, fontSize: 24, fontWeight: 600, color: C.text, marginTop: 2 }}>$84 <span style={{ fontSize: 14, color: C.muted }}>/$250</span></div>
+              <div style={{ fontFamily: SERIF, fontSize: 24, fontWeight: 600, color: C.text, marginTop: 2 }}>{usd0(spentToday)} <span style={{ fontSize: 14, color: C.muted }}>/{usd0(DAILY_BUDGET)}</span></div>
               <div style={{ fontSize: 11, color: C.muted }}>spent today</div>
             </div>
             <div style={{ width: 1, background: C.line, margin: "0 16px" }} />
@@ -485,7 +487,7 @@ function ManualScreen({ onAdded, go }) {
 
   function save() {
     if (!valid) return;
-    onAdded({ id: Date.now(), merchant: merchant.trim(), category, currency, amountLocal: amt, date: "2026-06-16", source: "manual" });
+    onAdded({ id: Date.now(), merchant: merchant.trim(), category, currency, amountLocal: amt, date: TODAY, addedAt: TODAY, source: "manual" });
   }
 
   const inputStyle = { width: "100%", fontSize: 15, color: C.text, border: `1px solid ${C.line}`, borderRadius: 12, padding: "12px 14px", background: C.card, outline: "none", boxSizing: "border-box" };
@@ -629,7 +631,7 @@ function ScanScreen({ onAdded }) {
 
   function reset() { setStage("idle"); setResult(null); setPreview(null); setRawErr(""); if (inputRef.current) inputRef.current.value = ""; }
   function confirm() {
-    onAdded({ id: Date.now(), merchant: result.merchant || "Receipt", category: result.category || "Other", currency: result.currency || "USD", amountLocal: result.total, date: result.date || "2026-06-16", source: "scan" });
+    onAdded({ id: Date.now(), merchant: result.merchant || "Receipt", category: result.category || "Other", currency: result.currency || "USD", amountLocal: result.total, date: result.date || TODAY, addedAt: TODAY, source: "scan" });
     reset();
   }
   const Icon = result ? (CAT_ICON[result.category] || Sparkles) : Sparkles;
@@ -927,6 +929,7 @@ export default function BeaconApp() {
   const go = (v) => setView(v);
   const navTo = (v) => { setView(v); setMenuOpen(false); };
   const spent = expenses.reduce((s, e) => s + toUSD(e.amountLocal, e.currency), 0);
+  const spentToday = expenses.filter((e) => e.addedAt === TODAY).reduce((s, e) => s + toUSD(e.amountLocal, e.currency), 0);
   const remaining = TRIP_BUDGET - spent;
   const recent = [...expenses].reverse();
   const addExpense = (e) => { setExpenses((p) => [...p, e]); setView("budget"); };
@@ -947,7 +950,7 @@ export default function BeaconApp() {
           </div>
         )}
         <div style={{ flex: 1, overflowY: "auto", paddingBottom: 8 }}>
-          {view === "home" && <HomeScreen spent={spent} go={go} now={now} onMenu={() => setMenuOpen(true)} onBell={() => setNotifOpen(true)} unread={unread} />}
+          {view === "home" && <HomeScreen spent={spent} spentToday={spentToday} go={go} now={now} onMenu={() => setMenuOpen(true)} onBell={() => setNotifOpen(true)} unread={unread} />}
           {view === "trip" && <TripScreen go={go} now={now} />}
           {view === "passport" && <PassportScreen />}
           {view === "budget" && <BudgetScreen expenses={recent} spent={spent} remaining={remaining} go={go} onDelete={removeExpense} />}
